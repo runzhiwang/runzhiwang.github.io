@@ -300,7 +300,8 @@
       
         
           
-            
+            <h2 id="1-libco简介"><a href="#1-libco简介" class="headerlink" title="1.libco简介"></a>1.libco简介</h2><p>libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。<br>libco采用epoll多路复用使得一个线程处理多个socket连接，采用钩子函数hook住socket族函数，采用时间轮盘处理等待超时事件，采用协程栈保存、恢复每个协程上下文环境。<br>为了让大家更容易阅读libco源码，本文以源码为主介绍libco，内容偏底层细节。<a href="https://github.com/Tencent/libco" target="_blank" rel="noopener">libco源码地址</a></p>
+
           
         
       

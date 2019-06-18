@@ -79,14 +79,17 @@
 
 
 
+<meta name="description" content="1.libco简介libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。libco采用epoll多路复用使得一个线程处理多个socket连接，采用钩子函数hook住socket族函数，采用时间轮盘处理等待超时事件，采用协程栈保存、恢复每个协程上下文环境。为了让大家更容易阅读libco源码，本文以源码为主介绍libco，内容偏底层细节。libco源码地址">
 <meta property="og:type" content="article">
 <meta property="og:title" content="漫谈libco协程设计及实现（万字长文）">
 <meta property="og:url" content="http://yoursite.com/2019/06/18/libco/index.html">
 <meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="1.libco简介libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。libco采用epoll多路复用使得一个线程处理多个socket连接，采用钩子函数hook住socket族函数，采用时间轮盘处理等待超时事件，采用协程栈保存、恢复每个协程上下文环境。为了让大家更容易阅读libco源码，本文以源码为主介绍libco，内容偏底层细节。libco源码地址">
 <meta property="og:locale" content="default">
-<meta property="og:updated_time" content="2019-06-18T03:16:28.962Z">
+<meta property="og:updated_time" content="2019-06-18T03:22:39.456Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="漫谈libco协程设计及实现（万字长文）">
+<meta name="twitter:description" content="1.libco简介libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。libco采用epoll多路复用使得一个线程处理多个socket连接，采用钩子函数hook住socket族函数，采用时间轮盘处理等待超时事件，采用协程栈保存、恢复每个协程上下文环境。为了让大家更容易阅读libco源码，本文以源码为主介绍libco，内容偏底层细节。libco源码地址">
 
 
 
@@ -296,7 +299,8 @@
       
 
       
-        
+        <h2 id="1-libco简介"><a href="#1-libco简介" class="headerlink" title="1.libco简介"></a>1.libco简介</h2><p>libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。<br>libco采用epoll多路复用使得一个线程处理多个socket连接，采用钩子函数hook住socket族函数，采用时间轮盘处理等待超时事件，采用协程栈保存、恢复每个协程上下文环境。<br>为了让大家更容易阅读libco源码，本文以源码为主介绍libco，内容偏底层细节。<a href="https://github.com/Tencent/libco" target="_blank" rel="noopener">libco源码地址</a></p>
+
       
     </div>
     
@@ -364,8 +368,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -407,6 +420,22 @@
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-libco简介"><span class="nav-number">1.</span> <span class="nav-text">1.libco简介</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
