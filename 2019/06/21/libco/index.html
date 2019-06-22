@@ -81,7 +81,7 @@
 
 <meta name="description" content="1.libco简介&amp;emsp;&amp;emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上。libco在2013年的时候作为腾讯六大开源项目首次开源。libco源码地址 &amp;emsp;&amp;emsp;libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。 &amp;emsp;&amp;emsp;libco采用epoll多路复用">
 <meta property="og:type" content="article">
-<meta property="og:title" content="漫谈libco协程设计及实现（万字长文）">
+<meta property="og:title" content="漫谈微信libco协程设计及实现（万字长文）">
 <meta property="og:url" content="http://yoursite.com/2019/06/21/libco/index.html">
 <meta property="og:site_name" content="王杰的博客">
 <meta property="og:description" content="1.libco简介&amp;emsp;&amp;emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上。libco在2013年的时候作为腾讯六大开源项目首次开源。libco源码地址 &amp;emsp;&amp;emsp;libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。 &amp;emsp;&amp;emsp;libco采用epoll多路复用">
@@ -110,9 +110,9 @@
 <meta property="og:image" content="http://yoursite.com/2019/06/21/libco/2-2-3-2.png">
 <meta property="og:image" content="http://yoursite.com/2019/06/21/libco/2-2-3-3.png">
 <meta property="og:image" content="http://yoursite.com/2019/06/21/libco/3-1-1.png">
-<meta property="og:updated_time" content="2019-06-22T04:02:48.789Z">
+<meta property="og:updated_time" content="2019-06-22T05:26:10.737Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="漫谈libco协程设计及实现（万字长文）">
+<meta name="twitter:title" content="漫谈微信libco协程设计及实现（万字长文）">
 <meta name="twitter:description" content="1.libco简介&amp;emsp;&amp;emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上。libco在2013年的时候作为腾讯六大开源项目首次开源。libco源码地址 &amp;emsp;&amp;emsp;libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。 &amp;emsp;&amp;emsp;libco采用epoll多路复用">
 <meta name="twitter:image" content="http://yoursite.com/2019/06/21/libco/2-1-1-1.jpg">
 
@@ -150,7 +150,7 @@
 
 
 
-  <title>漫谈libco协程设计及实现（万字长文） | 王杰的博客</title>
+  <title>漫谈微信libco协程设计及实现（万字长文） | 王杰的博客</title>
   
 
 
@@ -284,7 +284,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">漫谈libco协程设计及实现（万字长文）</h1>
+          <h1 class="post-title" itemprop="name headline">漫谈微信libco协程设计及实现（万字长文）</h1>
         
 
         <div class="post-meta">
