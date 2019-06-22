@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="1.存储要求&amp;emsp;&amp;emsp;在游戏中，玩家、帮会等数据需要存到数据库中，这些数据要能快速存储，且存储数据不影响游戏进程GameServer的响应速度，同时要保证服务器重启时加载数据需要尽可能的快，服务器宕机时数据不丢。 2.存储结构&amp;emsp;&amp;emsp;为了让服务器重启时加载数据尽可能的快，且服务器宕机时数据不丢，本文采用共享内存的方案。进程异常退出时，共享内存仍然存在，进程再次启动时可">
+<meta property="og:type" content="article">
+<meta property="og:title" content="游戏的存储方案">
+<meta property="og:url" content="http://yoursite.com/2019/06/21/storage/index.html">
+<meta property="og:site_name" content="王杰的博客">
+<meta property="og:description" content="1.存储要求&amp;emsp;&amp;emsp;在游戏中，玩家、帮会等数据需要存到数据库中，这些数据要能快速存储，且存储数据不影响游戏进程GameServer的响应速度，同时要保证服务器重启时加载数据需要尽可能的快，服务器宕机时数据不丢。 2.存储结构&amp;emsp;&amp;emsp;为了让服务器重启时加载数据尽可能的快，且服务器宕机时数据不丢，本文采用共享内存的方案。进程异常退出时，共享内存仍然存在，进程再次启动时可">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/storage/3-1.png">
+<meta property="og:updated_time" content="2019-06-22T04:12:01.445Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="游戏的存储方案">
+<meta name="twitter:description" content="1.存储要求&amp;emsp;&amp;emsp;在游戏中，玩家、帮会等数据需要存到数据库中，这些数据要能快速存储，且存储数据不影响游戏进程GameServer的响应速度，同时要保证服务器重启时加载数据需要尽可能的快，服务器宕机时数据不丢。 2.存储结构&amp;emsp;&amp;emsp;为了让服务器重启时加载数据尽可能的快，且服务器宕机时数据不丢，本文采用共享内存的方案。进程异常退出时，共享内存仍然存在，进程再次启动时可">
+<meta name="twitter:image" content="http://yoursite.com/2019/06/21/storage/3-1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/06/21/storage/">
+
+
+
+
+
+  <title>游戏的存储方案 | 王杰的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">王杰的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-主页">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            主页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-关于我">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于我
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-文集">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            文集
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/06/21/storage/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content>
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="王杰的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">游戏的存储方案</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-06-21T11:22:16+08:00">
+                2019-06-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i> 浏览
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>次
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="1-存储要求"><a href="#1-存储要求" class="headerlink" title="1.存储要求"></a>1.存储要求</h2><p>&emsp;&emsp;在游戏中，玩家、帮会等数据需要存到数据库中，这些数据要能快速存储，且存储数据不影响游戏进程GameServer的响应速度，同时要保证服务器重启时加载数据需要尽可能的快，服务器宕机时数据不丢。</p>
+<h2 id="2-存储结构"><a href="#2-存储结构" class="headerlink" title="2.存储结构"></a>2.存储结构</h2><p>&emsp;&emsp;为了让服务器重启时加载数据尽可能的快，且服务器宕机时数据不丢，本文采用共享内存的方案。进程异常退出时，共享内存仍然存在，进程再次启动时可以直接读取上次写的数据。GameServer主线程MainThread将数据写到共享内存，GameServer存储线程StorageThread将共享内存的数据写到数据库中。服务器重启时，MainThread从共享内存读取数据，共享内存没有的数据StorageThread从数据库读取。</p>
+<p>&emsp;&emsp;本文将游戏中的数据分为动态数据和静态数据。动态数据为玩家数据，这部分数据在玩家上线时，StoargeThread从数据库加载到共享内存，供MainThread使用。玩家下线时，StoargeThread将数据存储到数据库，MainThread清理共享内存。静态数据为帮会等公共数据，这部分数据为多个玩家共享，需要常驻共享内存，在单进程架构中静态数据被GameServer加载使用，在多进程架构中，静态数据被公共服务器WorldServer加载使用。</p>
+<p>&emsp;&emsp;对数据的存储结构有两种方案：一，每个动态数据为共享内存和数据库中的一条记录，对静态数据（如帮会等），k个帮会组成一个数据块为共享内存和数据库中一条记录；二，每个动态数据为共享内存和数据库中一条记录，对静态数据（如帮会等），每个帮会为共享内存和数据库中一条记录。两种方案区别在于静态数据的存储结构，因为玩家上线加载动态数据，下线释放动态数据，频繁的加载、释放决定每个玩家数据为共享内存和数据库中一条记录，便于管理每个玩家的数据。然而静态数据常驻共享内存，因此只有加载没有释放，两种方案均可。静态数据两种方案优劣点如下：一，多个帮会存为一条记录，例如10个帮会存为一条，100个帮会只需要加载10条记录，服务器启动时加载速度快；而每个帮会存为一条记录，需要加载100条记录，服务器启动时加载速度慢；二，多个帮会为一条记录，如果某个帮会解散，记录里会存在碎片，合服时，A服的一条记录里可能只有5个帮会，B服的一条记录里可能只有1个记录，如果不合并这两条记录，会导致空间浪费，因此需要人为合并这两条记录，但人为干预合服过程容易出错；如果每个帮会存为一条记录，合服时只需要将两个数据表合并即可；三，若每个动态数据、静态数据均为一条记录，可为所有动态、静态数据定制统一的模板，用于管理这些数据的共享内存。</p>
+<h2 id="3-状态机"><a href="#3-状态机" class="headerlink" title="3.状态机"></a>3.状态机</h2><p>&emsp;&emsp;共享内存中每条记录的状态共有七种：FREE表示该记录空闲，可以分配数据；LOADING表示该记录正在加载数据；NORMAL表示该记录有数据且没有被修改；MODIFIED表示该记录的数据已经被修改；SAVINGDB表示该记录的数据正在往数据库存储，并且存储后需要清理共享内存中该记录；DELINGDB表示该记录的数据正在从数据库中删除，并且删除后需要清理共享内存中该记录；DELINGMEM表示清理共享内存中该记录，然后将记录状态标记为FREE。状态之间切换如下图所示。共享内存的每条记录初始状态为FREE，表示可被分配数据，在加载数据时，变为LOADING状态，加载完数据并将数据复制在共享内存上后，记录状态变为NORMAL状态，此时数据可被MainThread使用，NORMAL状态的数据被修改后，变为MODIFIED状态，动态数据由于属性变化非常频繁，因此不在每个属性变化时都尝试修改为MODIFIED状态，而是定时置为MODIFIED状态，静态数据，变化不频繁的可以在数据变化时置为MODIFIED状态，变化频繁的可定时置为MODIFIED状态。状态为MODIFIED的静态、动态数据，都会定时存到数据库中，存完后共享内存中记录状态置为NORMAL。动态数据在玩家下线时，需要将玩家数据存到数据库并清理共享内存中的相应记录，因此先将玩家数据置为SAVINGDB，表示正在存数据库，存完数据库后将记录置为DELINGMEM状态。在少数情况下，需要删除数据库相应记录（例如删除邮件等），此时将共享内存置为DELINGDB状态，删完数据库的记录后，将共享内存置为DELINGMEM状态。将共享内存状态置为DELINGMEM状态后，或者StorageThread通知MainThread回收状态为DELINGMEM的共享内存记录，或者MainThread定时垃圾回收。</p>
+<img src="/2019/06/21/storage/3-1.png" title="图3.1">
+
+<h2 id="4-线程通信"><a href="#4-线程通信" class="headerlink" title="4.线程通信"></a>4.线程通信</h2><p>&emsp;&emsp;MainThread的存取请求写进一写一读的无锁循环队列，然后StoargeThread从队列中读取请求，在StorageThread内再开十个工作线程WorkThread负责处理这些请求，每个WorkThread均有一个无锁循环队列，StorageThread将存取请求随机写进一个WorkThread的无锁循环队列，WorkThread读取请求并处理。StorageThread为了避免处理重复的请求，维护一个全局的set，set中元素为存取请求对应的数据库键值，StorageThread每次读取MainThread的请求时，均将请求对应的键值加入set。每个WorkThread发现队列有请求，取出请求并处理，请求处理完后，将请求从全局set中删除，StoargeThread和每个WorkThread每次操作set时，均需要加锁。因为本文是多进程架构，需要对数据加上版本号，每次存完数据，数据库中的版本号加一，如果两个进程同时存一个玩家的数据，会因为版本号冲突导致某个进程存数据失败，便于校验两个进程同时写一份数据。在对数据加上版本号后，若MainThread连续对某个玩家发出两次存数据的请求，假设某玩家数据键值为user_3_11111，当前版本号为2，两个请求A、B均为将该玩家数据存到数据库。WorkThread1处理请求A时，发现共享内存中记录的版本号为2，此时线程WorkThread2处理请求B时，共享内存中记录的版本号也为2。请求A处理完，数据库中该记录版本号变为3，此时请求B会失败，因为请求B的版本号为2低于数据库该记录版本号3，因此认为共享内存的记录比数据库的记录老，在请求B失败时，会认为是两个进程同时写一条记录，造成干扰；若请求在处理完后才从set删除，在请求B尝试进入set时，发现B请求的键值user_3_11111已经set中，则忽略B请求。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/06/21/jps/" rel="next" title="跳点搜索算法JPS及其优化（万字长文）">
+                <i class="fa fa-chevron-left"></i> 跳点搜索算法JPS及其优化（万字长文）
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/06/21/datasync/" rel="prev" title="多进程架构数据同步方案">
+                多进程架构数据同步方案 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-存储要求"><span class="nav-text">1.存储要求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-存储结构"><span class="nav-text">2.存储结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-状态机"><span class="nav-text">3.状态机</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-线程通信"><span class="nav-text">4.线程通信</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i> 访问人数
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i> 总访问量
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

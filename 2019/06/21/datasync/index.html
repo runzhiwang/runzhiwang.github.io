@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="1.同步的必要性&amp;emsp;&amp;emsp;MMORPG为了满足单服承载更多玩家的需求，往往会采用多进程架构，即k个GameServer负责游戏逻辑以及一个WorldServer负责全局逻辑，如果单服承载n个玩家，则每个GameServer承载n/k个玩家。帮会等公共数据均在WorldServer上加载、存储。因此玩家查询帮会信息时，需要客户端将请求发到玩家所在的GameServer，GameServ">
+<meta property="og:type" content="article">
+<meta property="og:title" content="多进程架构数据同步方案">
+<meta property="og:url" content="http://yoursite.com/2019/06/21/datasync/index.html">
+<meta property="og:site_name" content="王杰的博客">
+<meta property="og:description" content="1.同步的必要性&amp;emsp;&amp;emsp;MMORPG为了满足单服承载更多玩家的需求，往往会采用多进程架构，即k个GameServer负责游戏逻辑以及一个WorldServer负责全局逻辑，如果单服承载n个玩家，则每个GameServer承载n/k个玩家。帮会等公共数据均在WorldServer上加载、存储。因此玩家查询帮会信息时，需要客户端将请求发到玩家所在的GameServer，GameServ">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-06-22T02:25:54.395Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="多进程架构数据同步方案">
+<meta name="twitter:description" content="1.同步的必要性&amp;emsp;&amp;emsp;MMORPG为了满足单服承载更多玩家的需求，往往会采用多进程架构，即k个GameServer负责游戏逻辑以及一个WorldServer负责全局逻辑，如果单服承载n个玩家，则每个GameServer承载n/k个玩家。帮会等公共数据均在WorldServer上加载、存储。因此玩家查询帮会信息时，需要客户端将请求发到玩家所在的GameServer，GameServ">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/06/21/datasync/">
+
+
+
+
+
+  <title>多进程架构数据同步方案 | 王杰的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">王杰的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-主页">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            主页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-关于我">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于我
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-文集">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            文集
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/06/21/datasync/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content>
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="王杰的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">多进程架构数据同步方案</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-06-21T11:23:16+08:00">
+                2019-06-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i> 浏览
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>次
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="1-同步的必要性"><a href="#1-同步的必要性" class="headerlink" title="1.同步的必要性"></a>1.同步的必要性</h2><p>&emsp;&emsp;MMORPG为了满足单服承载更多玩家的需求，往往会采用多进程架构，即k个GameServer负责游戏逻辑以及一个WorldServer负责全局逻辑，如果单服承载n个玩家，则每个GameServer承载n/k个玩家。帮会等公共数据均在WorldServer上加载、存储。因此玩家查询帮会信息时，需要客户端将请求发到玩家所在的GameServer，GameServer再将请求发到WorldServer，在WorldServer查询完毕后，再将查询结果发到玩家所在GameServer，GameServer将查询结果发送到客户端。由此可以看出，每次查询公共数据需要四次通信，不仅增加服务器压力，而且增加开发复杂度。因此，本文设计并实现一种将WorldServer上公共数据同步给GameServer的方案。</p>
+<h2 id="2-同步方案"><a href="#2-同步方案" class="headerlink" title="2.同步方案"></a>2.同步方案</h2><h3 id="2-1-同步数据"><a href="#2-1-同步数据" class="headerlink" title="2.1 同步数据"></a>2.1 同步数据</h3><p>&emsp;&emsp;本方案中WorldServer负责产生需要同步的公共数据：全量数据、增量数据；GameServer负责接收公共数据，并分配到共享内存中，GameServer采用共享内存目的是重启以后数据仍然在，只需要向WorldServer请求增量数据。本方案采用两种同步方式全量同步和增量同步，全量同步中WorldServer负责将整个公共数据都同步给GameServer，增量同步中WorldServer负责将被修改的公共数据同步给GameServer。全量同步按需进行，增量同步定时进行。WorldServer为每种需要同步的公共数据（帮会、队伍）均维护两个循环数组全量数组、增量数组，分别用于存储生成的全量数据和增量数据，其中全量数组大小为1。本文的全量数组和增量数组共用一个模板。GameServer和WorldServer为每种公共数据（帮会、队伍）均单独记录一个64位版本号，64位的版本号可以保证版本号不会达到最大值并重新计数。GameServer在共享内存没有数据时，版本号为-1，共享内存有数据时，版本号为WorldServer同步过来数据的版本号。WorldServer上的版本号从0开始计数，假设此时WorldServer上数据版本号为ver，为了保证全量数据和增量数据同一版本号数据状态一致，每次生成全量数据时，先检查是否有数据修改，如果有，先生成增量数据，并且增量数据的版本号为ver+1，然后生成全量数据，全量数据的版本号也为ver + 1；如果没有数据修改，则直接生成全量数据，全量数据版本号为ver。</p>
+<h3 id="2-2-同步流程"><a href="#2-2-同步流程" class="headerlink" title="2.2 同步流程"></a>2.2 同步流程</h3><p>&emsp;&emsp;GameServer重启以及发现WorldServer同步过来的版本号不符合要求时，会上报每种公共数据的版本号。如果WorldServer发现上传版本号为-1，则表示GameServer没有数据，此时WorldServer检查全量数组是否有全量数据，如果无全量数据则生成全量数据，然后将全量数据同步给GameServer；如果有全量数据，但全量数据的版本号小于增量数组中最老的增量数据版本号，比如全量数据版本号为8，最老的增量数据为10，则表示版本号为9的增量数据已经被冲掉了（循环数组的性质），此时不能同步版本号为8的增量数据，而是重新生成一份全量数据，并将全量数据同步给GameServer；如果有全量数据，并且全量数据的版本号不小于增量数组中最老的增量数据版本号，比如此时全量数据版本号为8，增量数据版本号有6-10，此时将版本号为8的全量数据以及版本号为9-10的增量数据均同步给GameServer。 如果WorldServer发现上传的版本号不为-1，说明GameServer有同步的数据，如果上传版本号小于增量数组中最老的增量数据版本号减一，比如上传版本号为8，最老的增量数据版本号为10，说明版本号为9的增量数据缺失，此时生成全量数据，并将全量数据同步给GameServer；否则，说明没有增量数据缺失，如果增量数据版本号有6-10，则将版本号为9-10的增量数据同步给GameServer。GameServer端在收到WorldServer同步过来的数据时，首先检查是否全量数据，如果有全量数据并且版本号大于本地版本号则读取全量数据，然后读取增量数据，读取增量数据时如果发现本地版本号为-1，则不读取，直接将版本号-1上报给WorldServer；如果增量数据版本号小于等于本地版本号，则不读取，将本地版本号置为-1，直接将版本号-1上报给WorldServer；如果增量数据版本号大于本地版本号加一，上报本地版本号；否则，读取增量数据。读取全量数据时，如果该种数据存在删除的情况，例如帮会可以解散，此时需要将该种数据的共享内存全部清空，然后在共享内存中重新分配全量数据，否则解散的帮会GameServer仍然存在。增量数据在数组中的存放位置为ver%增量数组大小，便于O(1)时间根据版本号读取增量数据。增量数组也是采用共享内存方式，可以在WorldServer重启时数据不丢。GameServer向WorldServer上报版本号需要加超时机制，在超时时间内，即使WorldServer同步给GameServer的数据版本号仍然不满足要求，GameServer不再向WorldServer上报。</p>
+<h2 id="3-拆包合包"><a href="#3-拆包合包" class="headerlink" title="3.拆包合包"></a>3.拆包合包</h2><p>&emsp;&emsp;同步全量数据或多个增量数据时都可能会导致WorldServer发送给GameServer的包Package超过上限，因此需要在WorldServer端拆包，GameServer端合包。WorldServer首先检查同步包的大小，如果大小超过阈值，则需要拆包。假设Package为10m，包上限为1m，则需要将Package拆分为10个包：Package1-Package10。Package1-Package10均携带一个guid，表示这些包是从一个包拆分而来，并且Package1-Package10均携带总的包数以及各自序号1-10。GameServer收到这些拆分的包后，先比较每个PackageX的序号是否等于总包数10，如果小于总包数先缓存，如果等于总包数则从缓存中取出同一个guid的所有拆分包，然后按序号合并。本例中Package1-Package9到GameServer端均先缓存，直到Package10到了，再将Package1-Package9取出，并合并Package1-Package10。</p>
+<h2 id="4-代码设计"><a href="#4-代码设计" class="headerlink" title="4.代码设计"></a>4.代码设计</h2><h3 id="循环数组-模板"><a href="#循环数组-模板" class="headerlink" title="循环数组-模板"></a>循环数组-模板</h3><p>&emsp;&emsp;游戏中的每种数据（以帮会为例）均有一个循环数组，且均为三层结构，第一层为数组，数组中的每个元素为一个版本号的增量数据，第二层仍然为数组，数组中每个元素为一个帮会的增量数据；第三层为字节数组，一个数组存一个帮会的增量数据。可以看出，第一层数组大小为存放增量数据版本号的区间范围，第二层数组大小为帮会数目，第三层数组大小为每个帮会增量数据最大字节数。对每种数据第一层数组大小可以相同，然而第二层、第三层不同，并且每种数据的第二层、第三层数目差距很大，如果全部统一为一个最大值，非常浪费空间。因此本文采用模板方式，每层数组大小为模板参数，每种数据设置自己的模板参数。</p>
+<h3 id="4-1-指针数组-多态"><a href="#4-1-指针数组-多态" class="headerlink" title="4.1 指针数组-多态"></a>4.1 指针数组-多态</h3><p>&emsp;&emsp;WorldServer每次同步的数据，需要判断其为何种类型数据（帮会、队伍），然后调用各自的数据管理器作读取、写共享内存等操作，因此将所有数据管理器抽象出一个基类，然后将读取等函数作为虚函数，将所有数据管理器的指针转化为基类指针放在一个指针数组中。WorldServer同步过来的数据带上该数据管理器的下标，然后从指针数组中取出数据管理器指针，并调用虚读取等虚函数。</p>
+<h3 id="4-2-增量数据-脏标记"><a href="#4-2-增量数据-脏标记" class="headerlink" title="4.2 增量数据-脏标记"></a>4.2 增量数据-脏标记</h3><p>&emsp;&emsp;写全量数据只需要将整个结构体写进流即可；而WorldServer写增量数据时，首先将脏标记数组写进流里，每个脏标记占一个bit，然后将置脏的结构体成员写进流里，GameServer首先读取脏标记数组，然后按照脏标记数组从流中读取数据。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/06/21/storage/" rel="next" title="游戏的存储方案">
+                <i class="fa fa-chevron-left"></i> 游戏的存储方案
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/06/21/memory/" rel="prev" title="服务器内存优化">
+                服务器内存优化 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-同步的必要性"><span class="nav-text">1.同步的必要性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-同步方案"><span class="nav-text">2.同步方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-同步数据"><span class="nav-text">2.1 同步数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-同步流程"><span class="nav-text">2.2 同步流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-拆包合包"><span class="nav-text">3.拆包合包</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-代码设计"><span class="nav-text">4.代码设计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#循环数组-模板"><span class="nav-text">循环数组-模板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-指针数组-多态"><span class="nav-text">4.1 指针数组-多态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-增量数据-脏标记"><span class="nav-text">4.2 增量数据-脏标记</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i> 访问人数
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i> 总访问量
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

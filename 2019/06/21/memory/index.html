@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="1.内存统计&amp;emsp;&amp;emsp;在对内存优化之前，需要先确定程序每个模块的内存分配。程序的性能有perf、gprof等分析工具，但内存没有较好的分析工具，因此需要自行统计。在linux下/proc/self/statm有当前进程的内存占用情况，共有七项：指标vsize虚拟内存页数、resident物理内存页数、share 共享内存页数、text 代码段内存页数，lib 引用库内存页数、data">
+<meta property="og:type" content="article">
+<meta property="og:title" content="服务器内存优化">
+<meta property="og:url" content="http://yoursite.com/2019/06/21/memory/index.html">
+<meta property="og:site_name" content="王杰的博客">
+<meta property="og:description" content="1.内存统计&amp;emsp;&amp;emsp;在对内存优化之前，需要先确定程序每个模块的内存分配。程序的性能有perf、gprof等分析工具，但内存没有较好的分析工具，因此需要自行统计。在linux下/proc/self/statm有当前进程的内存占用情况，共有七项：指标vsize虚拟内存页数、resident物理内存页数、share 共享内存页数、text 代码段内存页数，lib 引用库内存页数、data">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/memory/2-1.png">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/memory/2-2.png">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/memory/2-3.png">
+<meta property="og:updated_time" content="2019-06-22T04:22:14.263Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="服务器内存优化">
+<meta name="twitter:description" content="1.内存统计&amp;emsp;&amp;emsp;在对内存优化之前，需要先确定程序每个模块的内存分配。程序的性能有perf、gprof等分析工具，但内存没有较好的分析工具，因此需要自行统计。在linux下/proc/self/statm有当前进程的内存占用情况，共有七项：指标vsize虚拟内存页数、resident物理内存页数、share 共享内存页数、text 代码段内存页数，lib 引用库内存页数、data">
+<meta name="twitter:image" content="http://yoursite.com/2019/06/21/memory/2-1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/06/21/memory/">
+
+
+
+
+
+  <title>服务器内存优化 | 王杰的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">王杰的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-主页">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            主页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-关于我">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于我
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-文集">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            文集
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/06/21/memory/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content>
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="王杰的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">服务器内存优化</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-06-21T11:24:16+08:00">
+                2019-06-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i> 浏览
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>次
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="1-内存统计"><a href="#1-内存统计" class="headerlink" title="1.内存统计"></a>1.内存统计</h2><p>&emsp;&emsp;在对内存优化之前，需要先确定程序每个模块的内存分配。程序的性能有perf、gprof等分析工具，但内存没有较好的分析工具，因此需要自行统计。在linux下/proc/self/statm有当前进程的内存占用情况，共有七项：指标vsize虚拟内存页数、resident物理内存页数、share 共享内存页数、text 代码段内存页数，lib 引用库内存页数、data_stack 数据/堆栈段内存页数、dt 脏页数，七项指标的数字是内存的页数，因此需要乘以getpagesize()转换为byte。在每个模块结束后统计vsize的增加，即可知该模块占用的内存大小。</p>
+<p>&emsp;&emsp;在面向对象开发中，内存的消耗由对象的消耗组成，因此需要统计每个类的成员变量的占用内存大小。使用CLion或者visual studio都可以导出类中定义的所有成员变量，然后在gdb使用命令：p ((unsigned long)(&amp;((ClassName*)0)-&gt;MemberName))，即可打印出类ClassName的成员变量MemberName相对类基地址的偏移，根据偏移从小到大排序后，变量的顺序即为定义的顺序，根据偏移相减即可得出每个成员变量大小，然后优化占用内存大的成员变量。</p>
+<h2 id="2-内存泄露"><a href="#2-内存泄露" class="headerlink" title="2.内存泄露"></a>2.内存泄露</h2><p>&emsp;&emsp;内存泄露是指程序中已动态分配的堆内存由于某种原因程序未释放或无法释放，导致内存一直增长。虽然有valgrind等工具可以检查内存泄露，但valgrind虚拟出一个CPU环境，在该环境上运行，会导致内存增大、效率降低，对于大规模程序，基本无法在valgrind上运行。因此需要自行检查内存泄露，glibc提供的内存管理器的钩子函数可以监控内存的分配、释放。如图2.2.2、2.2.3所示，分别为钩子函数的分配内存和释放内存。因为服务器启动时需要预先分配很多内存，比如内存池，这些内存是在服务器停止时才释放，因此为了避免这些内存的干扰，在服务器启动之后才能开始内存泄露的统计。</p>
+<p>&emsp;&emsp;首先申请固定大小的vec_stack，记录所有分配的内存，如果有释放，则从vec_stack中删除，最后vec_stack中的元素即为泄露的内存，vec_stack必须为固定大小，否则vector扩容中会有内存分配，也不可以用map，map的红黑树旋转也会有内存分配，会造成干扰；然后通过图2.2.1所示的my_back_hook记录原有的malloc、free；并通过图2.2.2所示的my_init_hook将malloc、free换成自定义的钩子函数。</p>
+<p>&emsp;&emsp;每次分配内存时，都会进入自定义钩子函数my_malloc_hook中，如图2.2.2所示。在my_malloc_hook中首先通过my_recover_hook将malloc恢复成默认的，否则会造成死递归，然后通过默认的malloc分配大小为size的空间，为了分线程统计内存泄露，还需要对线程号做判断，在stTrace.m_pAttr记录内存分配的地址，m_nSize记录大小，m_szCallTrace记录调用栈，如果vec_stack已满，需要根据m_nSize从大到小排序，如果当前分配内存大于vec_stack记录的最小的分配内存，则替换；如果未满，则直接加入vec_stack，在my_malloc_hook结束时，将malloc替换成自定义的malloc。每次释放内存时，都会进入自定义钩子函数my_malloc_free中，如图2.2.3所示。在my_malloc_free中首先通过my_recover_hook将free恢复成默认的，否则会造成死递归，对线程号判断，然后在vec_stack中删除对应的分配，并将free替换成自定义free。</p>
+<img src="/2019/06/21/memory/2-1.png" title="图2.1">
+<img src="/2019/06/21/memory/2-2.png" title="图2.2">
+<img src="/2019/06/21/memory/2-3.png" title="图2.3">
+
+<h2 id="3-内存池"><a href="#3-内存池" class="headerlink" title="3.内存池"></a>3.内存池</h2><p>&emsp;&emsp;在游戏服务器内存分配过程中，glibc中的malloc采用的是ptmalloc，ptmalloc在对小对象进行分配时会产生大量内部碎片，同时也会有外部碎片的产生。因此往往需要自行设计并实现模板化的内存池，采用内存池的好处是，避免内部、外部碎片，对象New/Delete均为O(1)复杂度，同时有利于监控。例如当模板参数为宠物时，首先new出60个宠物的空间，对这60个宠物空间，当60个空间被全部使用时，再分配60个空间。</p>
+<h2 id="4-内存分配（ptmalloc-vs-tcmalloc）"><a href="#4-内存分配（ptmalloc-vs-tcmalloc）" class="headerlink" title="4.内存分配（ptmalloc vs tcmalloc）"></a>4.内存分配（ptmalloc vs tcmalloc）</h2><p>&emsp;&emsp;即使使用内存池，程序中仍然需要大量使用malloc分配空间。但主流使用的ptmalloc存在如下缺点：一，ptmalloc采用多个线程轮询加锁主分配区和非主分配的方式，造成锁的开销；二，多线程间的空闲内存无法复用，利用线程A释放一块内存，由于并不一定会释放给操作系统，线程B申请同样大小的内存时，不能复用A释放的内存，导致使用内存增加；三，ptmalloc分配的每块chunk需要8个字节记录前一个空闲块大小和当前块大小以及一些标记位。</p>
+<p>&emsp;&emsp;为此，本文提倡使用tcmalloc进行内存分配。tcmalloc对每个线程单独维护ThreadCache分配小内存；针对ptmalloc多线程内存无法复用的问题，tcmalloc为进程内的所有线程维护公共的CentralCache，ThreadCache会阶段性的回收内存到CentralCache；针对ptmalloc每块chunk使用8个字节表示其他信息，tcmalloc对每块chunk使用大概百分之一的空间表示其他信息，对小对象分配，空间利用率远高于ptmalloc。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/06/21/datasync/" rel="next" title="多进程架构数据同步方案">
+                <i class="fa fa-chevron-left"></i> 多进程架构数据同步方案
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/06/21/dirty/" rel="prev" title="脏标记遍历之极致优化">
+                脏标记遍历之极致优化 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-内存统计"><span class="nav-text">1.内存统计</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-内存泄露"><span class="nav-text">2.内存泄露</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-内存池"><span class="nav-text">3.内存池</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-内存分配（ptmalloc-vs-tcmalloc）"><span class="nav-text">4.内存分配（ptmalloc vs tcmalloc）</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i> 访问人数
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i> 总访问量
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

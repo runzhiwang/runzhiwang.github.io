@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang>
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="1.背景介绍&amp;emsp;&amp;emsp;本文适用于所有脏标记遍历功能，提升性能几十倍，本文以游戏中玩家的属性同步作为例子进行介绍。 &amp;emsp;&amp;emsp;MMORPG游戏中玩家有大量属性需要从服务器同步给客户端，例如名字、血量、战力、等级、速度等等。每当某个玩家的某个属性发生变化时，需要将玩家该属性的标志位置脏，在心跳或者其他需要发送的时机，调用同步属性函数，判断置脏的属性并同步给所有客户端。需要注">
+<meta property="og:type" content="article">
+<meta property="og:title" content="脏标记遍历之极致优化">
+<meta property="og:url" content="http://yoursite.com/2019/06/21/dirty/index.html">
+<meta property="og:site_name" content="王杰的博客">
+<meta property="og:description" content="1.背景介绍&amp;emsp;&amp;emsp;本文适用于所有脏标记遍历功能，提升性能几十倍，本文以游戏中玩家的属性同步作为例子进行介绍。 &amp;emsp;&amp;emsp;MMORPG游戏中玩家有大量属性需要从服务器同步给客户端，例如名字、血量、战力、等级、速度等等。每当某个玩家的某个属性发生变化时，需要将玩家该属性的标志位置脏，在心跳或者其他需要发送的时机，调用同步属性函数，判断置脏的属性并同步给所有客户端。需要注">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/dirty/1-1.png">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/dirty/1-2.png">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/dirty/2-1.png">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/dirty/2-2.png">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/dirty/2-3.png">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/dirty/3-1.png">
+<meta property="og:image" content="http://yoursite.com/2019/06/21/dirty/3-2.png">
+<meta property="og:updated_time" content="2019-06-22T04:08:34.021Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="脏标记遍历之极致优化">
+<meta name="twitter:description" content="1.背景介绍&amp;emsp;&amp;emsp;本文适用于所有脏标记遍历功能，提升性能几十倍，本文以游戏中玩家的属性同步作为例子进行介绍。 &amp;emsp;&amp;emsp;MMORPG游戏中玩家有大量属性需要从服务器同步给客户端，例如名字、血量、战力、等级、速度等等。每当某个玩家的某个属性发生变化时，需要将玩家该属性的标志位置脏，在心跳或者其他需要发送的时机，调用同步属性函数，判断置脏的属性并同步给所有客户端。需要注">
+<meta name="twitter:image" content="http://yoursite.com/2019/06/21/dirty/1-1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/06/21/dirty/">
+
+
+
+
+
+  <title>脏标记遍历之极致优化 | 王杰的博客</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">王杰的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-主页">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            主页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-关于我">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于我
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-文集">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            文集
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/06/21/dirty/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content>
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="王杰的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">脏标记遍历之极致优化</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-06-21T11:25:16+08:00">
+                2019-06-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i> 浏览
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>次
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="1-背景介绍"><a href="#1-背景介绍" class="headerlink" title="1.背景介绍"></a>1.背景介绍</h2><p>&emsp;&emsp;本文适用于所有脏标记遍历功能，提升性能几十倍，本文以游戏中玩家的属性同步作为例子进行介绍。</p>
+<p>&emsp;&emsp;MMORPG游戏中玩家有大量属性需要从服务器同步给客户端，例如名字、血量、战力、等级、速度等等。每当某个玩家的某个属性发生变化时，需要将玩家该属性的标志位置脏，在心跳或者其他需要发送的时机，调用同步属性函数，判断置脏的属性并同步给所有客户端。需要注意，不能每次在某个玩家的某个属性发生变化时，均同步给所有客户端，因为开销太大，一般在心跳里（固定时间间隔）同步。为了保证玩家属性在所有客户端及时更新，心跳间隔一般在500ms左右，如此频繁的调用以及同步属性函数内大量的脏标记判断导致同步属性函数成为性能瓶颈之一，大约占后台性能消耗的10%。</p>
+<p>&emsp;&emsp;假设玩家有n个属性，k个属性置脏，最直观的做法是遍历所有n个属性，逐个判断是否置脏，置脏的属性同步给客户端，需要判断n次；本文作者之前提过一种优化算法，根据属性置脏的频率，优先判断置脏频率高的属性，当判断出的脏属性数目等于k，则停止，该优化效率显著优于遍历n个属性，但也不是最优的算法；还有一种优化思路是用set记录置脏的属性，set插入时间复杂度为O(logn)，置脏m个属性，set插入操作总时间复杂度为O(log(1*2*..*m))，再考虑某个属性频繁置脏的情况，比如第m个属性在同步之前置脏p次，则set操作时间复杂度为O(log(1*2..*m*p)，虽然一般情况下m比较小，但不排除某些情况m很大，就会导致出现性能瓶颈，实测中发现采用set，o2编译，如图1.1所示插入50个脏属性耗时165639微秒，如图1.2所示置脏50个标记位耗时1522微秒，set效率低108倍，虽然同步的时间间隔内更新的属性数目很少，但某个属性更新的可能非常频繁，所以同步时间间隔内假设插入50个脏属性模拟很合理。显然，如果算法无论属性更新是否频繁，无论属性数目是多是少，都能在k的时间判断出哪些属性置脏，则该算法为最优算法。因为置脏的属性非常稀疏，k往往是个位数，所以最优算法可以将效率提升几十倍。</p>
+<img src="/2019/06/21/dirty/1-1.png" title="图1.1">
+<img src="/2019/06/21/dirty/1-2.png" title="图1.2">
+
+<h2 id="2-优化算法"><a href="#2-优化算法" class="headerlink" title="2.优化算法"></a>2.优化算法</h2><p>&emsp;&emsp;为引出本文的优化算法，本文首先介绍一个问题：计算一个整数的二进制表示中有多少个1。基本做法如图2.1所示。假设该整数n为10001100，则需要右移7次。但计算机里的数字本来就是用二进制存的，所以计算过程也都是二进制计算。利用一些位运算的特性，可以很容易计算1的个数。该例子中n - 1为10001011，n &amp; (n - 1)为10001000，可以看到低3位都变成了0。多验证几个例子，可以看出结论，要消除整数n最低位的1，可以使用 n = n &amp; (n-1)。从而计算n的二进制表示有多少个1的算法如图2.2所示。</p>
+<img src="/2019/06/21/dirty/2-1.png" title="图2.1">
+<img src="/2019/06/21/dirty/2-2.png" title="图2.2">
+
+<p>&emsp;&emsp;本文介绍一个gcc的内置函数，__builtin_ffs(uint32 n)，返回n最后一个为1的位是从后向前的第几位，例如若n为10001100，则__builtin_ffs(n)为3，该函数对应的x86汇编代码，O0编译结果如图2.3所示，仅有四条汇编指令。该内置函数64位的版本为__builtin_ffsll(uint64 n)。</p>
+<img src="/2019/06/21/dirty/2-3.png" title="图2.3">
+
+<p>&emsp;&emsp;接下来正式介绍本文的优化算法，假设有64个属性，该64个属性用bit位表示是否置脏，共需64bit，将64bit转成uint64的n，每次用__builtin_ffsll找出最低位的1的位置，即可找出一个置脏的属性，然后用n&amp;(n-1)消除最低位的1，当n为0时算法终止。假设64个属性第2个属性和第9个属性置脏，则该64bit编码为0…0100000010，首先用__builtin_ffsll找出低第2位的置脏属性，然后n=n&amp;(n-1)，即0…0100000000，再用__builtin_ffsll找出低第9位的置脏属性，然后n=n&amp;(n-1)即为0，算法终止，可看出从64个属性里找出置脏的两个属性，只需要两次操作。需要注意，为尽可能提升性能，脏标记数目最好为64位整数倍，否则假如脏标记数目为120位，取出64位后，需要将剩下的63位拆分成32位、16位、8位，分三次取出，再计算脏标记位置，性能会降低。</p>
+<h2 id="3-性能对比"><a href="#3-性能对比" class="headerlink" title="3.性能对比"></a>3.性能对比</h2><p>&emsp;&emsp;num类型为uint64，记录所有脏标记，num低第2位、低第64位置脏，即num为100…010。图3.1所示为遍历所有属性，并逐个判断是否置脏，num &amp; 1不为0时，表示第j个属性被置脏，图3.2所示为采用本文的优化算法，index为最低位的脏标记的位置。实测中图3.1耗时2011微秒，图3.2耗时26微秒，性能提升77倍。本文的优化算法不仅适用于属性同步，所有脏标记相关的功能均可采用，例如数据的判断置脏并落地存储。</p>
+<img src="/2019/06/21/dirty/3-1.png" title="图3.1">
+<img src="/2019/06/21/dirty/3-2.png" title="图3.2">
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/06/21/memory/" rel="next" title="服务器内存优化">
+                <i class="fa fa-chevron-left"></i> 服务器内存优化
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/06/21/libco/" rel="prev" title="漫谈libco协程设计及实现（万字长文）">
+                漫谈libco协程设计及实现（万字长文） <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-背景介绍"><span class="nav-text">1.背景介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-优化算法"><span class="nav-text">2.优化算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-性能对比"><span class="nav-text">3.性能对比</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user"></i> 访问人数
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye"></i> 总访问量
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
