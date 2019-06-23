@@ -79,12 +79,12 @@
 
 
 
-<meta name="description" content="1.libco简介&amp;emsp;&amp;emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上。libco在2013年的时候作为腾讯六大开源项目首次开源。libco源码地址 &amp;emsp;&amp;emsp;libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。 &amp;emsp;&amp;emsp;libco采用epoll多路复用">
+<meta name="description" content="1.libco简介&amp;emsp;&amp;emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上，使得微信后端服务能同时hold大量请求，被誉为微信服务器稳定性的基石。libco在2013年的时候作为腾讯六大开源项目首次开源。libco源码地址 &amp;emsp;&amp;emsp;libco首先能解决CPU利用率与IO利用率不平衡，比用多线程解决IO阻塞CPU问题更高">
 <meta property="og:type" content="article">
 <meta property="og:title" content="漫谈微信libco协程设计及实现（万字长文）">
 <meta property="og:url" content="http://yoursite.com/2019/06/21/libco/index.html">
 <meta property="og:site_name" content="王杰的博客">
-<meta property="og:description" content="1.libco简介&amp;emsp;&amp;emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上。libco在2013年的时候作为腾讯六大开源项目首次开源。libco源码地址 &amp;emsp;&amp;emsp;libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。 &amp;emsp;&amp;emsp;libco采用epoll多路复用">
+<meta property="og:description" content="1.libco简介&amp;emsp;&amp;emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上，使得微信后端服务能同时hold大量请求，被誉为微信服务器稳定性的基石。libco在2013年的时候作为腾讯六大开源项目首次开源。libco源码地址 &amp;emsp;&amp;emsp;libco首先能解决CPU利用率与IO利用率不平衡，比用多线程解决IO阻塞CPU问题更高">
 <meta property="og:locale" content="default">
 <meta property="og:image" content="http://yoursite.com/2019/06/21/libco/2-1-1-1.jpg">
 <meta property="og:image" content="http://yoursite.com/2019/06/21/libco/2-1-1-2.png">
@@ -110,10 +110,10 @@
 <meta property="og:image" content="http://yoursite.com/2019/06/21/libco/2-2-3-2.png">
 <meta property="og:image" content="http://yoursite.com/2019/06/21/libco/2-2-3-3.png">
 <meta property="og:image" content="http://yoursite.com/2019/06/21/libco/3-1-1.png">
-<meta property="og:updated_time" content="2019-06-22T05:26:10.737Z">
+<meta property="og:updated_time" content="2019-06-23T02:10:37.336Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="漫谈微信libco协程设计及实现（万字长文）">
-<meta name="twitter:description" content="1.libco简介&amp;emsp;&amp;emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上。libco在2013年的时候作为腾讯六大开源项目首次开源。libco源码地址 &amp;emsp;&amp;emsp;libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。 &amp;emsp;&amp;emsp;libco采用epoll多路复用">
+<meta name="twitter:description" content="1.libco简介&amp;emsp;&amp;emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上，使得微信后端服务能同时hold大量请求，被誉为微信服务器稳定性的基石。libco在2013年的时候作为腾讯六大开源项目首次开源。libco源码地址 &amp;emsp;&amp;emsp;libco首先能解决CPU利用率与IO利用率不平衡，比用多线程解决IO阻塞CPU问题更高">
 <meta name="twitter:image" content="http://yoursite.com/2019/06/21/libco/2-1-1-1.jpg">
 
 
@@ -339,8 +339,8 @@
       
 
       
-        <h2 id="1-libco简介"><a href="#1-libco简介" class="headerlink" title="1.libco简介"></a>1.libco简介</h2><p>&emsp;&emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上。libco在2013年的时候作为腾讯六大开源项目首次开源。<a href="https://github.com/Tencent/libco" target="_blank" rel="noopener">libco源码地址</a></p>
-<p>&emsp;&emsp;libco在解决cpu利用率与IO利用率不平衡的同时，又避免了异步调用和回调分离导致的代码结构破碎。</p>
+        <h2 id="1-libco简介"><a href="#1-libco简介" class="headerlink" title="1.libco简介"></a>1.libco简介</h2><p>&emsp;&emsp;libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上，使得微信后端服务能同时hold大量请求，被誉为微信服务器稳定性的基石。libco在2013年的时候作为腾讯六大开源项目首次开源。<a href="https://github.com/Tencent/libco" target="_blank" rel="noopener">libco源码地址</a></p>
+<p>&emsp;&emsp;libco首先能解决CPU利用率与IO利用率不平衡，比用多线程解决IO阻塞CPU问题更高效。因为用户态协程切换比线程切换性能高：线程切换保存恢复的数据更多，需要用户态和内核态切换。 其次libco又避免了异步调用和回调分离导致的代码结构破碎。</p>
 <p>&emsp;&emsp;libco采用epoll多路复用使得一个线程处理多个socket连接，采用钩子函数hook住socket族函数，采用时间轮盘处理等待超时事件，采用协程栈保存、恢复每个协程上下文环境。</p>
 <p>&emsp;&emsp;为了让大家更容易阅读libco源码，本文以源码为主介绍libco，内容偏底层细节。</p>
 <h2 id="2-设计思想"><a href="#2-设计思想" class="headerlink" title="2.设计思想"></a>2.设计思想</h2><h3 id="2-1协程切换"><a href="#2-1协程切换" class="headerlink" title="2.1协程切换"></a>2.1协程切换</h3><h4 id="2-1-1-函数栈"><a href="#2-1-1-函数栈" class="headerlink" title="2.1.1 函数栈"></a>2.1.1 函数栈</h4><p>&emsp;&emsp;首先复习下进程的地址空间，如图2.1.1.1所示，与本文相关的有代码段、堆、栈。代码段包含应用程序的汇编代码，指令寄存器eip存的是代码段中某一条汇编指令地址，cpu从eip中取出汇编指令的地址，并在代码段中找到对应汇编指令开始执行。CPU执行指令时在栈里存参数、局部变量等数据。代码通过malloc、new在堆上申请内存空间。</p>
