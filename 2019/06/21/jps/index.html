@@ -82,27 +82,27 @@
 <meta name="description" content="1.引言&amp;emsp;&amp;emsp;寻路算法用途众多，例如在游戏和地图中。A*算法已经众所周知，对于其优化也是层出不穷，然而性能并没有取得突破性进展。本文介绍JPS的效率、多线程、内存、路径优化算法。为了测试搜索算法的优化性能，实验中设置游戏场景使得起点和终点差距200个格子，需要寻路10000次。结果发现，A*寻路总时间约2.6074x1011纳秒（一秒为109纳秒）；基础版JPS寻路总时间1.70">
 <meta property="og:type" content="article">
 <meta property="og:title" content="跳点搜索算法JPS及其优化（万字长文）">
-<meta property="og:url" content="http://yoursite.com/2019/06/21/jps/index.html">
+<meta property="og:url" content="https://runzhiwang.github.io/2019/06/21/jps/index.html">
 <meta property="og:site_name" content="王杰的博客">
 <meta property="og:description" content="1.引言&amp;emsp;&amp;emsp;寻路算法用途众多，例如在游戏和地图中。A*算法已经众所周知，对于其优化也是层出不穷，然而性能并没有取得突破性进展。本文介绍JPS的效率、多线程、内存、路径优化算法。为了测试搜索算法的优化性能，实验中设置游戏场景使得起点和终点差距200个格子，需要寻路10000次。结果发现，A*寻路总时间约2.6074x1011纳秒（一秒为109纳秒）；基础版JPS寻路总时间1.70">
 <meta property="og:locale" content="default">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/2-1-1.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/2-2-1.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/表2-2-1.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/3-1-1-1.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/3-1-2-1.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/3-1-3-1.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/3-4-1.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/表4-1-1.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/4-1-1.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/4-1-2.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/4-1-3.png">
-<meta property="og:image" content="http://yoursite.com/2019/06/21/jps/表4-3-1.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/2-1-1.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/2-2-1.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/表2-2-1.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/3-1-1-1.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/3-1-2-1.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/3-1-3-1.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/3-4-1.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/表4-1-1.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/4-1-1.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/4-1-2.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/4-1-3.png">
+<meta property="og:image" content="https://runzhiwang.github.io/2019/06/21/jps/表4-3-1.png">
 <meta property="og:updated_time" content="2019-06-22T04:54:01.299Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="跳点搜索算法JPS及其优化（万字长文）">
 <meta name="twitter:description" content="1.引言&amp;emsp;&amp;emsp;寻路算法用途众多，例如在游戏和地图中。A*算法已经众所周知，对于其优化也是层出不穷，然而性能并没有取得突破性进展。本文介绍JPS的效率、多线程、内存、路径优化算法。为了测试搜索算法的优化性能，实验中设置游戏场景使得起点和终点差距200个格子，需要寻路10000次。结果发现，A*寻路总时间约2.6074x1011纳秒（一秒为109纳秒）；基础版JPS寻路总时间1.70">
-<meta name="twitter:image" content="http://yoursite.com/2019/06/21/jps/2-1-1.png">
+<meta name="twitter:image" content="https://runzhiwang.github.io/2019/06/21/jps/2-1-1.png">
 
 
 
@@ -132,7 +132,7 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/06/21/jps/">
+  <link rel="canonical" href="https://runzhiwang.github.io/2019/06/21/jps/">
 
 
 
@@ -255,7 +255,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/06/21/jps/">
+    <link itemprop="mainEntityOfPage" href="https://runzhiwang.github.io/2019/06/21/jps/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content>
